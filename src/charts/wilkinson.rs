@@ -1,3 +1,28 @@
+// Copyright 2020 The Birog Authors.
+// Copyright 2011 Justin Talbot.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Defines an axis labeling scheme based on an enhanced version of Wilkinson's optimization-based
+//! approach.
+//!
+//! Reference: Talbot, J., Lin, S., Hanrahan, P. (2010) An Extension of Wilkinson's
+//! Algorithm for Positioning Tick Labels on Axes, InfoVis 2010.
+//!
+//! This code is based on the labeling.R implementation, which is released under
+//! an Unlimited license. As such, this Rust implementation follows the same licensing
+//! scheme as the rest of the project.
+
 #[allow(dead_code)]
 pub enum LabelRange {
   Any,
@@ -5,7 +30,13 @@ pub enum LabelRange {
   Excluded,
 }
 
-pub fn generate_labels(dmin: f64, dmax: f64, max_labels: f64, label_inclusion: LabelRange) -> Vec<f64> {
+/// Generates a sequence of labels to be displayed across an axis.
+pub(crate) fn generate_labels(
+  dmin: f64,
+  dmax: f64,
+  max_labels: f64,
+  label_inclusion: LabelRange,
+) -> Vec<f64> {
   let mut outmin: f64 = 1.0;
   let mut outmax: f64 = 1.0;
   let mut outstep: f64 = 1.0;

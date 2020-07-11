@@ -1,9 +1,16 @@
 [package]
-name = "druid-admin-widgets"
+name = "birog"
+description = "Admin widgets built on top of druid"
+repository = "https://github.com/redime/druid-admin-widgets"
 version = "0.1.0"
 authors = ["Carlos Eduardo Melo <ceduardo.melo@redime.com.br>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "Apache-2.0"
+categories = ["gui"]
+readme = "README.md"
+keywords = ["gui", "ui", "widgets"]
 
 [dependencies]
+druid = "0.6"
+num-traits = "0.2"
+number_prefix = "0.4.0"
