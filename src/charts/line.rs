@@ -597,7 +597,7 @@ impl LineChart {
         &layout,
         (
           self.cursor_pos.x - layout.width() / 2.0,
-          origin_bottom + text_height + 3.0,
+          origin_bottom + text_height + 5.0,
         ),
         &env.get(theme::BACKGROUND_DARK),
       );

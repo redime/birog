@@ -13,7 +13,9 @@
 // limitations under the License.
 
 use druid::widget::Flex;
-use druid::{AppLauncher, Color, Data, Lens, LocalizedString, Widget, WindowDesc};
+use druid::{
+  theme, AppLauncher, Color, Data, Lens, LocalizedString, Widget, WindowDesc,
+};
 
 use birog::charts::line::{Line, LineChart, LineChartData};
 
@@ -28,6 +30,10 @@ fn main() {
     .title(LocalizedString::new("custom-widget-demo-window-title").with_placeholder("Chart Data"));
 
   AppLauncher::with_window(window)
+    .configure_env(|env, _| {
+      env.set(theme::WINDOW_BACKGROUND_COLOR, Color::rgb8(0x1F, 0x24, 0x30));
+      env.set(theme::FOREGROUND_DARK, Color::rgb8(0xCB, 0xCC, 0xC6));
+    })
     .use_simple_logger()
     .launch(data_builder())
     .expect("launch failed");
@@ -119,6 +125,6 @@ fn data_builder() -> LineChartData<i32, f64> {
 
   LineChartData::new()
     .with_title("The quick brown fox jumped over the lazy dog.")
-    .with_line(Line::new(points_a, Color::rgb8(0x22, 0xA2, 0xC9)))
-    .with_line(Line::new(points_b, Color::rgb8(0xC7, 0x6B, 0x29)))
+    .with_line(Line::new(points_a, Color::rgb8(0x73, 0xD0, 0xFF)))
+    .with_line(Line::new(points_b, Color::rgb8(0xF2, 0x87, 0x79)))
 }
