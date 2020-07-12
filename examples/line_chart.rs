@@ -13,9 +13,7 @@
 // limitations under the License.
 
 use druid::widget::Flex;
-use druid::{
-  theme, AppLauncher, Color, Data, Lens, LocalizedString, Widget, WindowDesc,
-};
+use druid::{theme, AppLauncher, Color, Data, Lens, LocalizedString, Widget, WindowDesc, WidgetExt};
 
 use birog::charts::line::{Line, LineChart, LineChartData};
 
@@ -42,7 +40,7 @@ fn main() {
 fn ui_builder() -> impl Widget<LineChartData<i32, f64>> {
   let mut layout = Flex::row();
   layout.add_flex_child(LineChart::new(), 1.0);
-  layout
+  layout.debug_paint_layout()
 }
 
 fn data_builder() -> LineChartData<i32, f64> {

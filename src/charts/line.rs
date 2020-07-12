@@ -23,6 +23,7 @@ use druid::{
 use num_traits::{AsPrimitive, Num};
 
 use crate::charts::wilkinson;
+use std::any::Any;
 
 #[derive(Clone, Debug)]
 pub struct Line<X, Y> {
@@ -75,7 +76,7 @@ impl LineChart {
         padding_bottom: 50.0,
         padding_left: 50.0,
         padding_right: 50.0,
-        header_height: 0.0,
+        header_height: 40.0,
         footer_height: 0.0,
         tick_length: 5.0,
         path_stroke_width: 2.0,
@@ -160,14 +161,42 @@ impl LineChart {
     (labels, precision)
   }
 
-  fn paint_labels(&mut self, ctx: &mut PaintCtx, env: &Env) {
+  fn paint_labels<X, Y>(&mut self, ctx: &mut PaintCtx, data: &LineChartData<X, Y>, env: &Env)
+  where
+    X: Data,
+    Y: Data,
+  {
     let size = ctx.size();
 
+    // Paint header
+    if let Some(ref title) = data.title {
+      let header_label_font = ctx
+          .text()
+          .new_font_by_name(&env.get(theme::FONT_NAME), 25.0)
+          .build()
+          .unwrap();
+
+      let header_layout = ctx
+        .text()
+        .new_text_layout(&header_label_font, title, std::f64::INFINITY)
+        .build()
+        .unwrap();
+
+      let pos_x = (size.width - header_layout.width()) / 2.0;
+      let pos_y = if let Some(metrics) = header_layout.line_metric(0) {
+        (self.settings.header_height + metrics.baseline) / 2.0
+      } else {
+        (self.settings.header_height + 25.0) / 2.0
+      };
+
+      ctx.draw_text(&header_layout, (pos_x, pos_y), &env.get(theme::FOREGROUND_DARK));
+    }
+
     let label_font = ctx
-      .text()
-      .new_font_by_name(&env.get(theme::FONT_NAME), self.settings.font_size)
-      .build()
-      .unwrap();
+        .text()
+        .new_font_by_name(&env.get(theme::FONT_NAME), self.settings.font_size)
+        .build()
+        .unwrap();
 
     let min_label_spacing_h = self.settings.font_size / 0.3;
     let min_label_spacing_v = self.settings.font_size / 0.4;
@@ -553,8 +582,8 @@ impl LineChart {
 
       let mut line_path = BezPath::new();
 
-      let mut y = origin_left;
-      while y <= origin_right {
+      let mut y = origin_top;
+      while y <= origin_bottom {
         line_path.move_to((self.cursor_pos.x, y.min(origin_bottom)));
         line_path.line_to((self.cursor_pos.x, (y + 5.0).min(origin_bottom)));
 
@@ -711,7 +740,7 @@ where
   }
 
   fn paint(&mut self, ctx: &mut PaintCtx, data: &LineChartData<X, Y>, env: &Env) {
-    self.paint_labels(ctx, env);
+    self.paint_labels(ctx, data, env);
     self.paint_cursor_reference(ctx, env);
     self.paint_lines(ctx, &data.lines, env);
   }
