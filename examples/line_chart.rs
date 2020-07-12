@@ -12,14 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use druid::widget::Flex;
-use druid::{theme, AppLauncher, Color, Data, Lens, LocalizedString, Widget, WindowDesc, WidgetExt};
+use druid::widget::{Flex, Label, List, MainAxisAlignment, SizedBox};
+use druid::{
+  theme, AppLauncher, Color, Data, Lens, LocalizedString, Widget, WidgetExt, WindowDesc,
+};
 
 use birog::charts::line::{Line, LineChart, LineChartData};
+use std::sync::Arc;
 
 #[derive(Clone, Data, Lens)]
 struct AppData {
   chart_data: LineChartData<i32, f64>,
+  left: Arc<Vec<String>>,
 }
 
 fn main() {
@@ -29,7 +33,10 @@ fn main() {
 
   AppLauncher::with_window(window)
     .configure_env(|env, _| {
-      env.set(theme::WINDOW_BACKGROUND_COLOR, Color::rgb8(0x1F, 0x24, 0x30));
+      env.set(
+        theme::WINDOW_BACKGROUND_COLOR,
+        Color::rgb8(0x1F, 0x24, 0x30),
+      );
       env.set(theme::FOREGROUND_DARK, Color::rgb8(0xCB, 0xCC, 0xC6));
     })
     .use_simple_logger()
@@ -37,13 +44,25 @@ fn main() {
     .expect("launch failed");
 }
 
-fn ui_builder() -> impl Widget<LineChartData<i32, f64>> {
-  let mut layout = Flex::row();
-  layout.add_flex_child(LineChart::new(), 1.0);
-  layout.debug_paint_layout()
+fn ui_builder() -> impl Widget<AppData> {
+  Flex::row()
+    .must_fill_main_axis(true)
+    .main_axis_alignment(MainAxisAlignment::SpaceBetween)
+    .with_child(
+      SizedBox::new(List::new(|| Label::new(|t: &String, _env: &_| t.into())).lens(AppData::left))
+        .width(100.)
+        .expand_height(),
+    )
+    .with_flex_child(
+      SizedBox::new(LineChart::new().lens(AppData::chart_data))
+        .expand_height()
+        .expand_width(),
+      1.0
+    )
+    .debug_paint_layout()
 }
 
-fn data_builder() -> LineChartData<i32, f64> {
+fn data_builder() -> AppData {
   let series_a = vec![
     34.14, 34.15, 33.89, 33.23, 33.43, 32.72, 32.44, 32.26, 31.35, 31.23, 30.59, 30.45, 29.89,
     29.28, 30.08, 30.49, 30.87, 30.54, 30.94, 31.57, 30.72, 31.2, 31.4, 30.91, 31.03, 31.24, 31.07,
@@ -121,8 +140,11 @@ fn data_builder() -> LineChartData<i32, f64> {
     .map(|(idx, price)| (-(idx as i32), *price))
     .collect();
 
-  LineChartData::new()
-    .with_title("The quick brown fox jumped over the lazy dog.")
-    .with_line(Line::new(points_a, Color::rgb8(0x73, 0xD0, 0xFF)))
-    .with_line(Line::new(points_b, Color::rgb8(0xF2, 0x87, 0x79)))
+  AppData {
+    chart_data: LineChartData::new()
+      .with_title("The quick brown fox jumped over the lazy dog.")
+      .with_line(Line::new(points_a, Color::rgb8(0x73, 0xD0, 0xFF)))
+      .with_line(Line::new(points_b, Color::rgb8(0xF2, 0x87, 0x79))),
+    left: Arc::new(vec!["A".to_string(), "B".to_string()]),
+  }
 }

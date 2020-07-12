@@ -23,7 +23,6 @@ use druid::{
 use num_traits::{AsPrimitive, Num};
 
 use crate::charts::wilkinson;
-use std::any::Any;
 
 #[derive(Clone, Debug)]
 pub struct Line<X, Y> {
@@ -72,10 +71,10 @@ impl LineChart {
       cursor_pos: Point::new(-1.0, -1.0),
       settings: LineChartSettings {
         font_size: 12.0,
-        padding_top: 50.0,
-        padding_bottom: 50.0,
-        padding_left: 50.0,
-        padding_right: 50.0,
+        padding_top: 40.0,
+        padding_bottom: 40.0,
+        padding_left: 40.0,
+        padding_right: 40.0,
         header_height: 40.0,
         footer_height: 0.0,
         tick_length: 5.0,
@@ -90,6 +89,44 @@ impl LineChart {
       proportion_x: 0.0,
       proportion_y: 0.0,
     }
+  }
+
+  pub fn with_padding(mut self, padding: f64) -> Self {
+    self.settings.padding_top = padding;
+    self.settings.padding_bottom = padding;
+    self.settings.padding_left = padding;
+    self.settings.padding_right = padding;
+    self
+  }
+
+  pub fn with_padding_top(mut self, padding: f64) -> Self {
+    self.settings.padding_top = padding;
+    self
+  }
+
+  pub fn with_padding_bottom(mut self, padding: f64) -> Self {
+    self.settings.padding_bottom = padding;
+    self
+  }
+
+  pub fn with_padding_left(mut self, padding: f64) -> Self {
+    self.settings.padding_left = padding;
+    self
+  }
+
+  pub fn with_padding_right(mut self, padding: f64) -> Self {
+    self.settings.padding_right = padding;
+    self
+  }
+
+  pub fn with_font_size(mut self, font_size: f64) -> Self {
+    self.settings.font_size = font_size;
+    self
+  }
+
+  pub fn with_line_stroke_width(mut self, width: f64) -> Self {
+    self.settings.path_stroke_width = width;
+    self
   }
 
   fn update_reference_data<X, Y>(&mut self, data: &LineChartData<X, Y>)
@@ -170,11 +207,13 @@ impl LineChart {
 
     // Paint header
     if let Some(ref title) = data.title {
+      self.settings.header_height = 40.0;
+
       let header_label_font = ctx
-          .text()
-          .new_font_by_name(&env.get(theme::FONT_NAME), 25.0)
-          .build()
-          .unwrap();
+        .text()
+        .new_font_by_name(&env.get(theme::FONT_NAME), 25.0)
+        .build()
+        .unwrap();
 
       let header_layout = ctx
         .text()
@@ -189,14 +228,20 @@ impl LineChart {
         (self.settings.header_height + 25.0) / 2.0
       };
 
-      ctx.draw_text(&header_layout, (pos_x, pos_y), &env.get(theme::FOREGROUND_DARK));
+      ctx.draw_text(
+        &header_layout,
+        (pos_x, pos_y),
+        &env.get(theme::FOREGROUND_DARK),
+      );
+    } else {
+      self.settings.header_height = 0.0;
     }
 
     let label_font = ctx
-        .text()
-        .new_font_by_name(&env.get(theme::FONT_NAME), self.settings.font_size)
-        .build()
-        .unwrap();
+      .text()
+      .new_font_by_name(&env.get(theme::FONT_NAME), self.settings.font_size)
+      .build()
+      .unwrap();
 
     let min_label_spacing_h = self.settings.font_size / 0.3;
     let min_label_spacing_v = self.settings.font_size / 0.4;
@@ -724,7 +769,7 @@ where
     &mut self,
     _ctx: &mut UpdateCtx,
     _old_data: &LineChartData<X, Y>,
-    data: &LineChartData<X, Y>,
+    _data: &LineChartData<X, Y>,
     _env: &Env,
   ) {
   }
