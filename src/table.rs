@@ -1,39 +1,32 @@
-use std::cmp::Ordering;
+use std::marker::PhantomData;
 
-use druid::widget::{Flex, Label, List, ListIter, SizedBox};
+use druid::widget::{Flex, Label, LabelText, List, ListIter, SizedBox};
 use druid::{
   BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Point,
   Rect, Size, UpdateCtx, Widget, WidgetPod,
 };
-use std::marker::PhantomData;
 
 pub struct Table<C, T> {
   root: WidgetPod<T, Flex<T>>,
   data_type: PhantomData<C>,
 }
 
-struct Column<T> {
-  is_flex: bool,
-  param: f64,
-  widget: WidgetPod<T, Flex<T>>
-}
-
 impl<C: Data, T: ListIter<C>> Table<C, T> {
   pub fn new() -> Self {
     Self {
       root: WidgetPod::new(Flex::row()),
-      data_type: Default::default()
+      data_type: Default::default(),
     }
   }
 
   pub fn with_column<W: Widget<C> + 'static>(
     mut self,
-    title: impl Into<String>,
+    title: impl Into<LabelText<T>>,
     closure: impl Fn() -> W + 'static,
     width: f64,
   ) -> Self {
     let widget = Flex::column()
-      .with_child(SizedBox::new(Label::new(title.into())).width(width))
+      .with_child(SizedBox::new(Label::new(title)).width(width))
       .with_child(SizedBox::new(List::new(closure)).width(width));
 
     self.root.widget_mut().add_child(widget);
@@ -43,13 +36,13 @@ impl<C: Data, T: ListIter<C>> Table<C, T> {
 
   pub fn with_flex_column<W: Widget<C> + 'static>(
     mut self,
-    title: impl Into<String>,
+    title: impl Into<LabelText<T>>,
     closure: impl Fn() -> W + 'static,
     param: f64,
   ) -> Self {
     let widget = Flex::column()
-        .with_child(Label::new(title.into()))
-        .with_child(List::new(closure));
+      .with_child(Label::new(title))
+      .with_child(List::new(closure));
 
     self.root.widget_mut().add_flex_child(widget, param);
 
