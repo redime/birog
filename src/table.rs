@@ -26,16 +26,16 @@ impl<T: Data> Table<T> {
     }
   }
 
-  pub fn with_column<W: Widget<T> + 'static>(
+  pub fn with_column<H: Widget<()> + 'static, W: Widget<T> + 'static>(
     mut self,
-    header: impl Into<LabelText<()>>,
+    header: H,
     closure: impl Fn() -> W + 'static,
     width: f64,
   ) -> Self {
     self
       .headers
       .widget_mut()
-      .add_child(SizedBox::new(Label::new(header)).width(width));
+      .add_child(SizedBox::new(header).width(width));
 
     self.columns.push(Column {
       widget: Box::new(move || Box::new((closure)())),
