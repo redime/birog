@@ -1,5 +1,5 @@
 use birog::table::Table;
-use druid::widget::Label;
+use druid::widget::{CrossAxisAlignment, Flex, Label};
 use druid::{AppLauncher, Data, Lens, LocalizedString, Widget, WidgetExt, WindowDesc};
 use std::sync::Arc;
 
@@ -30,7 +30,16 @@ fn ui_builder() -> impl Widget<AppData> {
   Table::new()
     .with_column(
       "First Name",
-      || Label::new(|person: &Person, _env: &_| person.first_name.clone()),
+      || {
+        Flex::column()
+          .with_child(Label::new(|person: &Person, _env: &_| {
+            person.first_name.clone()
+          }))
+          .with_child(Label::new(|person: &Person, _env: &_| {
+            person.first_name.clone()
+          }))
+          .cross_axis_alignment(CrossAxisAlignment::Start)
+      },
       200.0,
     )
     .with_column(
@@ -38,10 +47,10 @@ fn ui_builder() -> impl Widget<AppData> {
       || Label::new(|person: &Person, _env: &_| person.last_name.clone()),
       200.0,
     )
-    .with_flex_column(
+    .with_column(
       "Phone Number",
       || Label::new(|person: &Person, _env: &_| person.phone.clone()),
-      1.0,
+      100.0,
     )
     .lens(AppData::data)
     .debug_paint_layout()
@@ -54,6 +63,11 @@ fn data_builder() -> AppData {
         first_name: "John".to_string(),
         last_name: "Doe".to_string(),
         phone: "555-1234".to_string(),
+      },
+      Person {
+        first_name: "Jane".to_string(),
+        last_name: "Smith".to_string(),
+        phone: "555-0000".to_string(),
       },
       Person {
         first_name: "Jane".to_string(),

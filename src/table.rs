@@ -1,93 +1,164 @@
-use std::marker::PhantomData;
+use std::cmp::Ordering;
 
-use druid::widget::{Flex, Label, LabelText, List, ListIter, SizedBox};
+use druid::widget::{Flex, Label, LabelText, ListIter, SizedBox};
 use druid::{
   BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx, PaintCtx, Point,
   Rect, Size, UpdateCtx, Widget, WidgetPod,
 };
 
-pub struct Table<C, T> {
-  root: WidgetPod<T, Flex<T>>,
-  data_type: PhantomData<C>,
+pub struct Table<T> {
+  headers: WidgetPod<(), Flex<()>>,
+  columns: Vec<Column<T>>,
+  children: Vec<WidgetPod<T, Flex<T>>>,
 }
 
-impl<C: Data, T: ListIter<C>> Table<C, T> {
+struct Column<T> {
+  widget: Box<dyn Fn() -> Box<dyn Widget<T>>>,
+  width: f64,
+}
+
+impl<T: Data> Table<T> {
   pub fn new() -> Self {
     Self {
-      root: WidgetPod::new(Flex::row()),
-      data_type: Default::default(),
+      headers: WidgetPod::new(Flex::row()),
+      columns: Vec::new(),
+      children: Vec::new(),
     }
   }
 
-  pub fn with_column<W: Widget<C> + 'static>(
+  pub fn with_column<W: Widget<T> + 'static>(
     mut self,
-    title: impl Into<LabelText<T>>,
+    header: impl Into<LabelText<()>>,
     closure: impl Fn() -> W + 'static,
     width: f64,
   ) -> Self {
-    let widget = Flex::column()
-      .with_child(SizedBox::new(Label::new(title)).width(width))
-      .with_child(SizedBox::new(List::new(closure)).width(width));
+    self
+      .headers
+      .widget_mut()
+      .add_child(SizedBox::new(Label::new(header)).width(width));
 
-    self.root.widget_mut().add_child(widget);
+    self.columns.push(Column {
+      widget: Box::new(move || Box::new((closure)())),
+      width,
+    });
 
     self
   }
 
-  pub fn with_flex_column<W: Widget<C> + 'static>(
-    mut self,
-    title: impl Into<LabelText<T>>,
-    closure: impl Fn() -> W + 'static,
-    param: f64,
-  ) -> Self {
-    let widget = Flex::column()
-      .with_child(Label::new(title))
-      .with_child(List::new(closure));
+  fn update_child_count(&mut self, data: &impl ListIter<T>, _env: &Env) -> bool {
+    let len = self.children.len();
+    match len.cmp(&data.data_len()) {
+      Ordering::Greater => self.children.truncate(data.data_len()),
+      Ordering::Less => data.for_each(|_, i| {
+        if i >= len {
+          let mut widget = Flex::row();
 
-    self.root.widget_mut().add_flex_child(widget, param);
+          for column in self.columns.iter() {
+            let child = (column.widget)();
+            widget.add_child(SizedBox::new(child).width(column.width));
+          }
 
-    self
+          self.children.push(WidgetPod::new(widget));
+        }
+      }),
+      Ordering::Equal => (),
+    }
+    len != data.data_len()
   }
 }
 
-impl<C: Data, T: ListIter<C>> Widget<T> for Table<C, T> {
+impl<C: Data, T: ListIter<C>> Widget<T> for Table<C> {
   fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-    self.root.event(ctx, event, data, env)
+    let mut children = self.children.iter_mut();
+    data.for_each_mut(|child_data, _| {
+      if let Some(child) = children.next() {
+        child.event(ctx, event, child_data, env);
+      }
+    });
   }
 
   fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &T, env: &Env) {
-    self.root.lifecycle(ctx, event, data, env)
+    if let LifeCycle::WidgetAdded = event {
+      if self.update_child_count(data, env) {
+        ctx.children_changed();
+      }
+    }
+
+    let mut children = self.children.iter_mut();
+    data.for_each(|child_data, _| {
+      if let Some(child) = children.next() {
+        child.lifecycle(ctx, event, child_data, env);
+      }
+    });
   }
 
   fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &T, data: &T, env: &Env) {
-    self.root.update(ctx, data, env)
+    // we send update to children first, before adding or removing children;
+    // this way we avoid sending update to newly added children, at the cost
+    // of potentially updating children that are going to be removed.
+    let mut children = self.children.iter_mut();
+    data.for_each(|child_data, _| {
+      if let Some(child) = children.next() {
+        child.update(ctx, child_data, env);
+      }
+    });
+
+    if self.update_child_count(data, env) {
+      ctx.children_changed();
+    }
   }
 
   fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &T, env: &Env) -> Size {
     let mut width = bc.min().width;
-    let mut height = 0.0;
-
+    let mut y = 0.0;
     let mut paint_rect = Rect::ZERO;
 
-    let child_bc = BoxConstraints::new(
+    let header_bc = BoxConstraints::new(
       Size::new(bc.min().width, 0.0),
       Size::new(bc.max().width, std::f64::INFINITY),
     );
-    let child_size = self.root.layout(ctx, &child_bc, data, env);
-    let rect = Rect::from_origin_size(Point::new(0.0, height), child_size);
-    self.root.set_layout_rect(ctx, data, env, rect);
-    paint_rect = paint_rect.union(self.root.paint_rect());
 
-    width = width.max(child_size.width);
-    height = child_size.height;
+    let header_size = self.headers.layout(ctx, &header_bc, &(), env);
+    let rect = Rect::from_origin_size(Point::new(0.0, y), header_size);
+    self.headers.set_layout_rect(ctx, &(), env, rect);
+    paint_rect = paint_rect.union(self.headers.paint_rect());
+    width = width.max(header_size.width);
+    y += header_size.height;
 
-    let my_size = bc.constrain(Size::new(width, height));
+    let mut children = self.children.iter_mut();
+    data.for_each(|child_data, _| {
+      let child = match children.next() {
+        Some(child) => child,
+        None => {
+          return;
+        }
+      };
+      let child_bc = BoxConstraints::new(
+        Size::new(bc.min().width, 0.0),
+        Size::new(bc.max().width, std::f64::INFINITY),
+      );
+      let child_size = child.layout(ctx, &child_bc, child_data, env);
+      let rect = Rect::from_origin_size(Point::new(0.0, y), child_size);
+      child.set_layout_rect(ctx, child_data, env, rect);
+      paint_rect = paint_rect.union(child.paint_rect());
+      width = width.max(child_size.width);
+      y += child_size.height;
+    });
+
+    let my_size = bc.constrain(Size::new(width, y));
     let insets = paint_rect - Rect::ZERO.with_size(my_size);
     ctx.set_paint_insets(insets);
     my_size
   }
 
   fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-    self.root.paint(ctx, data, env)
+    self.headers.paint(ctx, &(), env);
+
+    let mut children = self.children.iter_mut();
+    data.for_each(|child_data, _| {
+      if let Some(child) = children.next() {
+        child.paint(ctx, child_data, env);
+      }
+    });
   }
 }
